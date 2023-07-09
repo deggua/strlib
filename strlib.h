@@ -13,10 +13,11 @@
 
 // TODO: StringBuilder
 // TODO: SSO
+// TODO: String slicing
 
 // Doesn't need to be free'd
 // NOTE: Calling String_CStr on it is invalid
-#define str(x) (&((const String){.len = sizeof((x)) - 1, .buf = (x)}))
+#define str(x) (&((const String) { .len = sizeof((x)) - 1, .buf = (x) }))
 
 #define STRING_OVERLOAD(arg0, arg1, arg2, ...) arg2
 
@@ -28,7 +29,7 @@
         const char* : String_FromCString, \
         char* : String_FromCString, \
         default: String_New \
-    )(x)
+    )((x))
 /* clang-format on */
 
 // Generic constructor for String type
@@ -40,11 +41,11 @@
 
 typedef struct {
     size_t len;
-    char*  buf;
+    char* buf;
 } String;
 
 typedef struct {
-    size_t  len;
+    size_t len;
     String* str;
 } StringList;
 
@@ -66,7 +67,7 @@ static inline String String_New(size_t len)
     char* buf = calloc(1, len + 1);
     assert(buf);
 
-    return (String){.len = len, .buf = buf};
+    return (String) { .len = len, .buf = buf };
 }
 
 // Creates a String from a C-string (null terminated char array)
@@ -205,7 +206,7 @@ static inline bool String_IsWhitespaceChar(char c)
 static inline String String_Trim(const String* str)
 {
     size_t front = 0;
-    size_t back  = 0;
+    size_t back = 0;
 
     for (ssize_t ii = 0; ii < (ssize_t)str->len && String_IsWhitespaceChar(str->buf[ii]); ii++) {
         front += 1;
@@ -216,7 +217,7 @@ static inline String String_Trim(const String* str)
     }
 
     size_t trim_amt = front + back;
-    String ret      = String_New(str->len - trim_amt);
+    String ret = String_New(str->len - trim_amt);
     memcpy(ret.buf, &str->buf[front], str->len - front - back);
 
     return ret;
@@ -271,9 +272,9 @@ static inline String String_Replace(const String* str, const String* old, const 
         return String_Copy(str);
     }
 
-    size_t  old_count = String_DistinctInstancesOf(str, old);
-    ssize_t ret_len   = (ssize_t)str->len + (ssize_t)old_count * ((ssize_t) new->len - (ssize_t)old->len);
-    String  ret       = String_New(ret_len);
+    size_t old_count = String_DistinctInstancesOf(str, old);
+    ssize_t ret_len = (ssize_t)str->len + (ssize_t)old_count * ((ssize_t) new->len - (ssize_t)old->len);
+    String ret = String_New(ret_len);
 
     size_t ret_pos = 0;
     size_t str_pos = 0;
@@ -303,24 +304,24 @@ static inline StringList String_Split(const String* str, const String* delim)
 {
     assert(delim->len > 0);
 
-    size_t delim_count     = String_DistinctInstancesOf(str, delim);
-    size_t substr_count    = delim_count + 1;
-    size_t char_count      = str->len - delim_count * delim->len;
-    size_t char_buf_size   = char_count + substr_count; // need 1 extra byte per substring for null terminator insertion
+    size_t delim_count = String_DistinctInstancesOf(str, delim);
+    size_t substr_count = delim_count + 1;
+    size_t char_count = str->len - delim_count * delim->len;
+    size_t char_buf_size = char_count + substr_count; // need 1 extra byte per substring for null terminator insertion
     size_t str_header_size = sizeof(String) * substr_count;
 
-    char*   mem  = calloc(1, char_buf_size + str_header_size);
+    char* mem = calloc(1, char_buf_size + str_header_size);
     String* strs = (String*)mem;
-    char*   data = mem + str_header_size;
+    char* data = mem + str_header_size;
 
-    *strs = (String){.len = 0, .buf = data};
+    *strs = (String) { .len = 0, .buf = data };
     size_t str_pos;
     for (str_pos = 0; str_pos < str->len - delim->len + 1;) {
         bool found = !memcmp(&str->buf[str_pos], delim->buf, delim->len);
         if (found) {
             strs += 1;
             data += 1;
-            *strs = (String){.len = 0, .buf = data};
+            *strs = (String) { .len = 0, .buf = data };
             str_pos += delim->len;
         } else {
             *data = str->buf[str_pos];
@@ -335,7 +336,7 @@ static inline StringList String_Split(const String* str, const String* delim)
         strs->len += str->len - str_pos;
     }
 
-    return (StringList){
+    return (StringList) {
         .len = substr_count,
         .str = (String*)mem,
     };
