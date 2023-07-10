@@ -5,11 +5,11 @@
 
 #define FAILURE(msg) printf("FAILURE (%s:%d) :: " msg "\n", __FILE__, __LINE__)
 #if 0
-#    define SUCCESS(msg) printf("SUCCESS (%s:%d) :: " msg "\n", __FILE__, __LINE__)
+#define SUCCESS(msg) printf("SUCCESS (%s:%d) :: " msg "\n", __FILE__, __LINE__)
 #else
-#    define SUCCESS(msg) \
-        do {             \
-        } while (0)
+#define SUCCESS(msg) \
+    do {             \
+    } while (0)
 #endif
 #define ASSERT(expr)             \
     do {                         \
@@ -42,8 +42,8 @@ void test_creation(TestResult* result)
     }
 
     {
-        char   arr[] = "Hello World\n";
-        String str   = String_FromCharArray(arr, sizeof(arr) - 1);
+        char arr[] = "Hello World\n";
+        String str = String_FromCharArray(arr, sizeof(arr) - 1);
 
         ASSERT(strcmp(String_CStr(&str), "Hello World\n") == 0);
         ASSERT(str.len == strlen("Hello World\n"));
@@ -52,8 +52,8 @@ void test_creation(TestResult* result)
     }
 
     {
-        char   arr[] = "Hello World\n";
-        String str   = String_New(sizeof(arr) - 1);
+        char arr[] = "Hello World\n";
+        String str = String_New(sizeof(arr) - 1);
         memcpy(str.buf, arr, sizeof(arr) - 1);
 
         ASSERT(strcmp(String_CStr(&str), "Hello World\n") == 0);
@@ -158,13 +158,13 @@ void test_simple(TestResult* result)
 
 void test_comparison(TestResult* result)
 {
-    String str1   = String("abc");
+    String str1 = String("abc");
     String str1_a = String("abc");
-    String str2   = String("abcd");
-    String str3   = String("abd");
-    String str4   = String("");
+    String str2 = String("abcd");
+    String str3 = String("abd");
+    String str4 = String("");
     String str4_a = String("");
-    String str5   = String("aba");
+    String str5 = String("aba");
 
     ASSERT(String_Equal(&str1, &str1_a) == true);
     ASSERT(String_Equal(&str1, &str2) == false);
@@ -324,16 +324,16 @@ void test_split(TestResult* result)
     String str6 = String("Hello World");
     String str7 = String("");
 
-    StringList slist1   = String_Split(&str1, str(";"));
-    StringList slist2   = String_Split(&str2, str(";"));
-    StringList slist3   = String_Split(&str3, str(";"));
+    StringList slist1 = String_Split(&str1, str(";"));
+    StringList slist2 = String_Split(&str2, str(";"));
+    StringList slist3 = String_Split(&str3, str(";"));
     StringList slist4_1 = String_Split(&str4, str("---"));
     StringList slist5_1 = String_Split(&str5, str("---"));
     StringList slist4_2 = String_Split(&str4, str("--"));
     StringList slist5_2 = String_Split(&str5, str("--"));
     StringList slist6_1 = String_Split(&str6, str(";"));
     StringList slist6_2 = String_Split(&str6, str("Hello World"));
-    StringList slist7   = String_Split(&str7, str(";"));
+    StringList slist7 = String_Split(&str7, str(";"));
 
     ASSERT(slist1.len == 3);
     ASSERT(String_Equal(&slist1.str[0], str("Test")));
@@ -433,9 +433,83 @@ void test_join(TestResult* result)
     String_Delete(&join3_3);
 }
 
+void test_slice(TestResult* result)
+{
+    String str1 = String("foo bar");
+
+    String slice1 = String_Slice(&str1, 0, str1.len);
+    String slice2 = String_Slice(&str1, 0, String_FirstOccurrenceOf(&str1, str(" bar")));
+    String slice3 = String_Slice(&str1, String_FirstOccurrenceOf(&str1, str("bar")), str1.len);
+    String slice4 = String_Slice(&str1, 0, 0);
+
+    ASSERT(String_Equal(&slice1, str("foo bar")));
+    ASSERT(String_Equal(&slice2, str("foo")));
+    ASSERT(String_Equal(&slice3, str("bar")));
+    ASSERT(String_Equal(&slice4, str("")));
+
+    String_Delete(&str1);
+    String_Delete(&slice1);
+    String_Delete(&slice2);
+    String_Delete(&slice3);
+    String_Delete(&slice4);
+}
+
+void test_write_print(TestResult* result)
+{
+    FILE* fd_write = fopen("test.txt", "wb");
+    assert(fd_write);
+
+    String str1 = String("foo bar");
+    String str2 = String(str("string with \0 in it"));
+    String str3 = String("");
+
+    String_Write(&str1, fd_write);
+    fprintf(fd_write, "\n");
+
+    String_Write(&str2, fd_write);
+    fprintf(fd_write, "\n");
+
+    String_Write(&str3, fd_write);
+    fprintf(fd_write, "\n");
+
+    fprintf(fd_write, STRING_FMT "\n", STRING_ARG(&str1));
+    fprintf(fd_write, STRING_FMT "\n", STRING_ARG(&str2));
+    fprintf(fd_write, STRING_FMT "\n", STRING_ARG(&str3));
+
+    fflush(fd_write);
+    fclose(fd_write);
+
+    FILE* fd_read = fopen("test.txt", "rb");
+    assert(fd_read);
+
+    char buf[256];
+
+    fgets(buf, sizeof(buf), fd_read);
+    ASSERT(!strcmp(buf, "foo bar\n"));
+
+    fgets(buf, sizeof(buf), fd_read);
+    ASSERT(!strcmp(buf, "string with \0 in it\n"));
+
+    fgets(buf, sizeof(buf), fd_read);
+    ASSERT(!strcmp(buf, "\n"));
+
+    fgets(buf, sizeof(buf), fd_read);
+    ASSERT(!strcmp(buf, "foo bar\n"));
+
+    fgets(buf, sizeof(buf), fd_read);
+    ASSERT(!strcmp(buf, "string with \n"));
+
+    fgets(buf, sizeof(buf), fd_read);
+    ASSERT(!strcmp(buf, "\n"));
+
+    String_Delete(&str1);
+    String_Delete(&str2);
+    String_Delete(&str3);
+}
+
 int main(void)
 {
-    TestResult result = {0};
+    TestResult result = { 0 };
 
     test_creation(&result);
     test_simple(&result);
@@ -445,6 +519,8 @@ int main(void)
     test_trim(&result);
     test_split(&result);
     test_join(&result);
+    test_slice(&result);
+    test_write_print(&result);
 
     printf(
         "\n\n"

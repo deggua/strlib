@@ -25,6 +25,23 @@ String y = String(str("String literal"));    // String_Copy
 String z = String((char){'a', 'b', 'c'}, 3); // String_FromCharArray
 String w = String(10);                       // String_New
 ```
+Note that to create a string with `\0` in it, it should be initialized like this:
+```c
+String str = String(str("String with \0 inside"));
+// str = "String with \0 inside"
+```
+Doing the following won't work because the macro can't distinguish between a string literal and a `const char*`
+```c
+String str = String("String with \0 inside");
+// str = "String with "
+```
+
+`STRING_FMT` and `STRING_ARG(str)` can be used with `printf` to format `String` prints. Note that this doesn't handle the case where there are `\0` chars inside the string.
+
+Example:
+```c
+printf("My string = " STRING_FMT "\n", STRING_ARG(&my_string));
+```
 
 ## Functions
 |Function|Description|
@@ -46,20 +63,21 @@ String w = String(10);                       // String_New
 | `size_t String_InstancesOf(const String* str, const String* substr)` | Returns the number of instances of `substr` in `str` |
 | `String String_Replace(const String* str, const String* old, const String* new)` | Replaces (from the left) every distinct instance of `old` in `str` with `new` |
 | `StringList String_Split(const String* str, const String* delim)` | Returns a `StringList` containing an array of `String` substrings which were separated by `delim` in `str` |
+| `String String_Slice(const String* str, size_t start, size_t end)` | Returns a `String` slice from `str` that starts from index `start` up to `end` |
+| `String String_Write(const String* str, FILE* fd)` | Write `str` to a `FILE*` `fd` |
+| `String String_Print(const String* str)` | Print `str` to `stdout`, handles printing strings with `\0` in them |
 | `const char* String_CStr(String* str)` | Returns a null-terminated C-string from a `String` |
 | `void String_Delete(String* str)` | Frees a `String` |
 | `void StringList_Delete(String* str_list)` | Frees a `StringList` |
 
 ## Tests
-`test.c` has some (currently 154) tests that verify functional correctness, I recommend you compile with `clang test.c -fsanitize=address` to verify memory correctness as well.
+`test.c` has some (currently 164) tests that verify functional correctness, I recommend you compile with `clang test.c -fsanitize=address` to verify memory correctness as well.
 
 ## Performance
 Most functions are O(n), worst case for some functions is O(n<sup>2</sup>). All funcitons perform, at most, a single memory allocation (if they return a `String`). `String_CStr` does not allocate memory, it just places a null-terminator in the `String` argument's buffer, therefore its lifetime is tied to the associated `String`.
 
 ## TODO
-* `Slice` function
 * Configureable length type (e.g. using `uint32_t` instead of `size_t` for lower overhead)
 * SSO (small-string optimization)
 * `StringBuilder` for more efficient string construction
-* `printf` compatibility (custom format macro)
-* C99 option
+* C99 support

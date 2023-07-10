@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -13,11 +14,14 @@
 
 // TODO: StringBuilder
 // TODO: SSO
-// TODO: String slicing
 
 // Doesn't need to be free'd
 // NOTE: Calling String_CStr on it is invalid
 #define str(x) (&((const String) { .len = sizeof((x)) - 1, .buf = (x) }))
+
+// NOTE: can't print past null chars this way, string will be cut off at first null
+#define STRING_FMT "%.*s"
+#define STRING_ARG(str) ((int)(str)->len), ((str)->buf)
 
 #define STRING_OVERLOAD(arg0, arg1, arg2, ...) arg2
 
@@ -349,4 +353,26 @@ static inline const char* String_CStr(String* str)
 {
     str->buf[str->len] = '\0';
     return str->buf;
+}
+
+// Return a slice from a string from index range [`start`, `end`) from `str`
+static inline String String_Slice(const String* str, size_t start, size_t end)
+{
+    assert(0 <= start && start < str->len);
+    assert(0 <= end && end <= str->len);
+    assert(end >= start);
+    return String_FromCharArray(&str->buf[start], end - start);
+}
+
+// Write a string to a FILE*
+static inline void String_Write(const String* str, FILE* fd)
+{
+    fwrite(str->buf, sizeof(char), str->len, fd);
+}
+
+// Print a string to stdout
+// NOTE: Capable of printing past null chars
+static inline void String_Print(const String* str)
+{
+    String_Write(str, stdout);
 }
